@@ -8,4 +8,4 @@ cd doing-list
 npm install
 npm install zustand vite-plugin-pwa
 npm run dev
-웹앱은 기본적으로 http://localhost:5173에서 실행된다. 백엔드(Supabase) API Key 및 URL은 프로젝트 루트의 .env 파일 설정을 따른다.공식 문서전체 프로젝트 기획안 (PDF)화면 구성 및 와이어프레임 설계Supabase DB 테이블 및 스키마 설계PWA 서비스 워커 및 캐싱 전략<img width="700" height="491" alt="image" src="https://github.com/user-attachments/assets/34ddfe88-aa10-4a18-a36a-043528393cdf" />
+웹앱은 기본적으로 http://localhost:5173에서 실행된다. 백엔드(Supabase) API Key 및 URL은 프로젝트 루트의 .env 파일 설정을 따른다.공식 문서전체 프로젝트 기획안 (PDF)화면 구성 및 와이어프레임 설계Supabase DB 테이블 및 스키마 설계PWA 서비스 워커 및 캐싱 전략
