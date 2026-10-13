@@ -1,118 +1,253 @@
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SewingButtonCheckbox } from '../components/SewingButtonCheckbox'
+import { useTodos } from '../features/todos/todoContext'
+import { compareDeadlines, dDayLabel, getProgress, isTodoComplete } from '../features/todos/todoData'
 
-const previewTodos = [
-  { title: 'GitHub 공개 레포 연결 흐름 정리', meta: '마감일 10월 08일', status: '진행 중' },
-  { title: 'Todo 화면 와이어프레임 작성', meta: '마감일 10월 10일', status: '진행 중' },
-  { title: 'README 프로젝트 설명 업데이트', meta: '마감일 없음', status: '완료' },
-]
+type SortBy = 'deadline' | 'name'
 
 export function HomePage() {
+  const { todos, toggleChecklistItem } = useTodos()
+  const [sortBy, setSortBy] = useState<SortBy>('deadline')
+  const [slideIndex, setSlideIndex] = useState(0)
+  const [expandedTodoIds, setExpandedTodoIds] = useState<number[]>([])
+  const pointerStartX = useRef<number | null>(null)
+
+  const deadlineItems = todos.filter((todo) => !isTodoComplete(todo) && todo.dueDate !== null).sort(compareDeadlines)
+  const activeSlide = Math.min(slideIndex, Math.max(0, deadlineItems.length - 1))
+  const visibleTodos = [...todos].sort(
+    sortBy === 'name'
+      ? (a, b) => a.title.localeCompare(b.title, 'ko') || a.id - b.id
+      : compareDeadlines,
+  )
+  const remainingCount = todos.filter((todo) => !isTodoComplete(todo)).length
+
+  function handleSwipeEnd(clientX: number) {
+    if (pointerStartX.current === null) return
+    const distance = pointerStartX.current - clientX
+    pointerStartX.current = null
+
+    if (Math.abs(distance) < 40) return
+    setSlideIndex((current) => Math.max(0, Math.min(current + (distance > 0 ? 1 : -1), deadlineItems.length - 1)))
+  }
+
+  function toggleExpanded(todoId: number) {
+    setExpandedTodoIds((current) => (
+      current.includes(todoId) ? current.filter((id) => id !== todoId) : [...current, todoId]
+    ))
+  }
+
   return (
-    <div className="py-10 lg:py-16">
-      <section className="max-w-3xl">
-        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">오늘의 작업</p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.06em] text-zinc-950 sm:text-5xl dark:text-white">
-          해야 할 일을 정리하고, 하나씩 끝내요.
-        </h1>
-        <p className="mt-5 max-w-xl text-base leading-7 text-zinc-600 dark:text-zinc-400">
-          Todo에 GitHub 공개 레포를 연결해서 작업의 맥락까지 한 곳에서 관리하세요.
-        </p>
+    <div className="py-6 lg:py-8">
+      <section aria-labelledby="deadline-summary-heading" className="rounded-2xl bg-white px-4 py-3 shadow-[0_12px_32px_rgba(75,51,47,0.06)] sm:px-5">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <h1 className="shrink-0 text-sm font-semibold text-ink" id="deadline-summary-heading">마감 일정({deadlineItems.length})</h1>
+          <div className="h-7 w-px shrink-0 bg-line" aria-hidden="true" />
+
+          {deadlineItems.length > 0 ? (
+            <>
+              <button
+                aria-label="이전 마감 일정"
+                className="shrink-0 rounded-lg px-1.5 py-1 text-xl leading-none text-ink hover:bg-accent-soft disabled:cursor-default disabled:opacity-30"
+                disabled={activeSlide === 0}
+                onClick={() => setSlideIndex(activeSlide - 1)}
+                type="button"
+              >
+                ‹
+              </button>
+              <div
+                aria-label="마감 일정 슬라이드"
+                className="min-w-0 flex-1 cursor-grab overflow-hidden select-none touch-pan-y active:cursor-grabbing"
+                onPointerCancel={() => { pointerStartX.current = null }}
+                onPointerDown={(event) => {
+                  pointerStartX.current = event.clientX
+                  event.currentTarget.setPointerCapture(event.pointerId)
+                }}
+                onPointerUp={(event) => handleSwipeEnd(event.clientX)}
+              >
+                <div
+                  className="flex transition-transform duration-300 ease-out motion-reduce:transition-none"
+                  style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+                >
+                  {deadlineItems.map((todo, index) => (
+                    <div
+                      aria-hidden={index !== activeSlide}
+                      className="flex w-full shrink-0 items-center justify-between gap-3"
+                      key={todo.id}
+                    >
+                      <span className="truncate text-sm font-medium text-ink">{todo.title}</span>
+                      <span className="shrink-0 text-base font-bold text-accent">
+                        {dDayLabel(todo.dueDate!)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                aria-label="다음 마감 일정"
+                className="shrink-0 rounded-lg px-1.5 py-1 text-xl leading-none text-ink hover:bg-accent-soft disabled:cursor-default disabled:opacity-30"
+                disabled={activeSlide === deadlineItems.length - 1}
+                onClick={() => setSlideIndex(activeSlide + 1)}
+                type="button"
+              >
+                ›
+              </button>
+              <span aria-live="polite" className="hidden shrink-0 text-xs text-muted sm:inline">
+                {activeSlide + 1}/{deadlineItems.length}
+              </span>
+            </>
+          ) : (
+            <p className="min-w-0 flex-1 text-sm text-muted">예정된 마감 일정이 없어요.</p>
+          )}
+        </div>
       </section>
 
-      <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-16">
-        <section aria-labelledby="todo-composer-heading">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_16px_40px_rgba(24,24,27,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-base font-semibold" id="todo-composer-heading">
-                  Todo 추가 영역
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">제목과 마감일을 입력하는 화면 기반</p>
-              </div>
-              <span className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                화면 기반
-              </span>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="rounded-xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-600">
-                Todo 제목을 입력하세요
-              </div>
-              <button className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white" disabled type="button">
-                Todo 추가
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
-                마감일 선택
-              </div>
-              <span className="text-xs text-zinc-400 dark:text-zinc-500">마감일은 선택 항목이에요.</span>
-            </div>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-16">
+        <section aria-labelledby="todo-list-heading">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 pb-4">
+            <h2 className="shrink-0 text-lg font-semibold tracking-[-0.04em] text-ink sm:text-xl" id="todo-list-heading">Todo 목록</h2>
+            <label className="flex items-center gap-1 justify-self-center text-xs font-medium text-ink sm:gap-2 sm:text-sm" htmlFor="todo-sort">
+              정렬
+              <select
+                className="rounded-lg bg-white px-2 py-1.5 text-xs text-ink sm:px-3 sm:py-2 sm:text-sm"
+                id="todo-sort"
+                onChange={(event) => setSortBy(event.target.value as SortBy)}
+                value={sortBy}
+              >
+                <option value="deadline">마감일순</option>
+                <option value="name">이름순</option>
+              </select>
+            </label>
+            <Link
+              aria-label="Todo 추가"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-white text-2xl leading-none text-ink transition hover:border-accent hover:bg-accent-soft"
+              to="/todos/new"
+            >
+              +
+            </Link>
           </div>
 
-          <section className="mt-10" aria-labelledby="todo-list-heading">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-4 dark:border-zinc-800">
-              <div>
-                <h2 className="text-xl font-semibold tracking-[-0.04em]" id="todo-list-heading">
-                  Todo 목록
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">목록과 정렬 컨트롤이 들어갈 영역</p>
-              </div>
-              <div className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-                기본 정렬: 마감일순
-              </div>
-            </div>
+          <ul className="mt-5 space-y-3">
+            {visibleTodos.map((todo) => {
+              const progress = getProgress(todo)
+              const isExpanded = expandedTodoIds.includes(todo.id)
 
-            <ul className="mt-5 divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900/80">
-              {previewTodos.map((todo) => (
-                <li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5" key={todo.title}>
-                  <div className="flex items-start gap-3">
-                    <span className="mt-1 size-4 rounded border border-zinc-300 dark:border-zinc-600" />
-                    <div>
-                      <p className={`font-medium ${todo.status === '완료' ? 'text-zinc-400 line-through dark:text-zinc-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
-                        {todo.title}
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{todo.meta}</p>
+              return (
+                <li className="overflow-hidden rounded-2xl bg-white transition-colors hover:bg-accent-soft/40" key={todo.id}>
+                  <div className="relative">
+                    <Link
+                      aria-label={`${todo.title} 상세 페이지 보기`}
+                      className="absolute inset-0 z-10 focus-visible:rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
+                      to={`/todos/${todo.id}`}
+                    />
+                    <div className="px-5 py-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="min-w-0 font-medium text-ink">{todo.title}</p>
+                        {todo.dueDate ? (
+                          <time className="shrink-0 text-right text-base font-bold text-accent" dateTime={todo.dueDate}>
+                            {dDayLabel(todo.dueDate)}
+                          </time>
+                        ) : (
+                          <span className="shrink-0 text-right text-xs text-muted">마감일 없음</span>
+                        )}
+                      </div>
+
+                      <div className="mt-4 w-full">
+                        <p className="text-xs text-muted">하위 체크리스트 {progress.completed}/{progress.total} 완료</p>
+                        <div
+                          aria-label={`${todo.title} 진행률`}
+                          aria-valuemax={100}
+                          aria-valuemin={0}
+                          aria-valuenow={progress.percent}
+                          className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-line"
+                          role="progressbar"
+                        >
+                          <div className="h-full rounded-full bg-accent" style={{ width: `${progress.percent}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-end justify-between gap-4">
+                        <Link
+                          className="relative z-20 inline-flex min-w-0 max-w-[70%] rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:border-accent hover:bg-accent-soft"
+                          to={`/repositories/${todo.id}`}
+                        >
+                          <span className="truncate">{todo.repository?.name ?? '레포 연결 전'}</span>
+                        </Link>
+                        <button
+                          aria-controls={isExpanded ? `todo-checklist-${todo.id}` : undefined}
+                          aria-expanded={isExpanded}
+                          aria-label={`${todo.title} 하위 체크리스트 ${isExpanded ? '접기' : '펼치기'}`}
+                          className="relative z-20 flex size-8 items-center justify-center rounded-lg text-2xl leading-none text-ink hover:bg-accent-soft"
+                          onClick={() => toggleExpanded(todo.id)}
+                          type="button"
+                        >
+                          <span aria-hidden="true" className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>⌄</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pl-7 sm:pl-0">
-                    <span className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
-                      레포 연결
-                    </span>
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500">{todo.status}</span>
-                  </div>
+                  {isExpanded && (
+                    <div className="bg-surface-muted/60 px-5 py-4" id={`todo-checklist-${todo.id}`}>
+                      {todo.checklist.length > 0 ? (
+                        <ol className="space-y-3">
+                          {todo.checklist.map((item, index) => (
+                            <li className="flex items-center gap-3 text-sm text-ink" key={item.id}>
+                              <span className="w-5 shrink-0 text-right text-xs font-semibold text-muted">{index + 1}.</span>
+                              <SewingButtonCheckbox
+                                checked={item.completed}
+                                id={`home-check-${todo.id}-${item.id}`}
+                                itemIndex={index}
+                                label={`${item.title} 완료`}
+                                onChange={() => toggleChecklistItem(todo.id, item.id)}
+                                size="small"
+                                todoId={todo.id}
+                              />
+                              <label
+                                className={`min-w-0 cursor-pointer ${item.completed ? 'text-muted line-through' : ''}`}
+                                htmlFor={`home-check-${todo.id}-${item.id}`}
+                              >
+                                {item.title}
+                              </label>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="text-sm text-muted">하위 체크리스트가 없어요.</p>
+                      )}
+                      <Link className="mt-4 inline-block text-xs font-medium text-ink underline decoration-line underline-offset-4 hover:decoration-accent" to={`/todos/${todo.id}`}>
+                        상세 화면 보기
+                      </Link>
+                    </div>
+                  )}
                 </li>
-              ))}
-            </ul>
-
-            <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">위 목록은 화면 구조 확인을 위한 예시 데이터예요.</p>
-          </section>
+              )
+            })}
+          </ul>
         </section>
 
-        <aside className="self-start rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
-          <p className="text-sm font-semibold">작업 현황 영역</p>
+        <aside className="self-start rounded-2xl bg-white p-5">
+          <p className="text-sm font-semibold text-ink">작업 현황</p>
           <dl className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950">
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">전체</dt>
-              <dd className="mt-1 text-2xl font-semibold">3</dd>
+            <div className="rounded-xl bg-surface-muted p-3">
+              <dt className="text-xs text-muted">전체</dt>
+              <dd className="mt-1 text-2xl font-semibold text-ink">{todos.length}</dd>
             </div>
-            <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30">
-              <dt className="text-xs text-emerald-700 dark:text-emerald-400">진행 중</dt>
-              <dd className="mt-1 text-2xl font-semibold text-emerald-700 dark:text-emerald-400">2</dd>
+            <div className="rounded-xl bg-accent-soft p-3">
+              <dt className="text-xs text-ink">진행 중</dt>
+              <dd className="mt-1 text-2xl font-semibold text-ink">{remainingCount}</dd>
             </div>
           </dl>
 
-          <div className="mt-6 border-t border-zinc-200 pt-5 dark:border-zinc-800">
-            <p className="text-sm font-semibold">GitHub 연결 영역</p>
-            <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              개발자이신가요? GitHub로 로그인하면 공개 레포를 연결할 수 있어요.
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-ink">GitHub 리포지터리 관리</p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Todo별 리포지터리 연결 상태를 확인할 수 있어요.
             </p>
             <Link
-              className="mt-4 block rounded-xl border border-zinc-300 px-3 py-2.5 text-center text-sm font-medium text-zinc-700 transition hover:border-emerald-500 hover:text-emerald-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-400"
-              to="/login"
+              className="mt-4 block rounded-xl border border-line px-3 py-2.5 text-center text-sm font-medium text-ink transition hover:border-accent hover:bg-accent-soft"
+              to="/repositories"
             >
-              로그인 화면 보기
+              관리 화면 보기
             </Link>
           </div>
         </aside>
