@@ -1,12 +1,17 @@
-import { useReducer } from 'react'
+import { useEffect, useReducer } from 'react'
 import type { ReactNode } from 'react'
 import { TodoContext } from './todoContext'
 import { initialTodos } from './todoData'
 import type { NewTodoInput, Repository, TodoChanges } from './todoData'
 import { todoReducer } from './todoReducer'
+import { loadTodos, saveTodos } from './todoStorage'
 
 export function TodoProvider({ children }: { children: ReactNode }) {
-  const [todos, dispatch] = useReducer(todoReducer, initialTodos)
+  const [todos, dispatch] = useReducer(todoReducer, initialTodos, loadTodos)
+
+  useEffect(() => {
+    saveTodos(todos)
+  }, [todos])
 
   function addTodo(input: NewTodoInput) {
     const title = input.title.trim()
