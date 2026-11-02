@@ -9,16 +9,19 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   const [todos, dispatch] = useReducer(todoReducer, initialTodos)
 
   function addTodo(input: NewTodoInput) {
+    const title = input.title.trim()
+    if (!title) throw new Error('Todo title is required.')
+
     const id = crypto.randomUUID()
     const timestamp = new Date().toISOString()
-    const checklist = input.checklistTitles.filter((title) => title.trim()).map((title) => ({
+    const checklist = input.checklistTitles.filter((checklistTitle) => checklistTitle.trim()).map((checklistTitle) => ({
       id: crypto.randomUUID(),
-      title: title.trim(),
+      title: checklistTitle.trim(),
       completed: false,
     }))
     dispatch({ type: 'todo/added', todo: {
       id,
-      title: input.title.trim(),
+      title,
       isCompleted: false,
       dueDate: input.dueDate,
       createdAt: timestamp,

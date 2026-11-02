@@ -11,23 +11,40 @@ export function TodoCreatePage() {
   const { addTodo } = useTodos()
   const navigate = useNavigate()
   const nextItemKey = useRef(1)
+  const titleInputRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [checklist, setChecklist] = useState<DraftItem[]>([])
   const [repository, setRepository] = useState<Repository | null>(null)
   const [isRepositoryPickerOpen, setIsRepositoryPickerOpen] = useState(false)
+  const [titleError, setTitleError] = useState('')
+  const [submitError, setSubmitError] = useState('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!title.trim()) return
+    const normalizedTitle = title.trim()
 
-    const id = addTodo({
-      title,
-      dueDate: dueDate || null,
-      checklistTitles: checklist.map((item) => item.title),
-      repository,
-    })
-    navigate(`/todos/${id}`)
+    if (!normalizedTitle) {
+      setTitleError('프로젝트 이름을 입력해 주세요.')
+      setSubmitError('')
+      titleInputRef.current?.focus()
+      return
+    }
+
+    setTitleError('')
+    setSubmitError('')
+
+    try {
+      const id = addTodo({
+        title: normalizedTitle,
+        dueDate: dueDate || null,
+        checklistTitles: checklist.map((item) => item.title.trim()).filter(Boolean),
+        repository,
+      })
+      navigate(`/todos/${id}`)
+    } catch {
+      setSubmitError('Todo를 저장하지 못했어요. 다시 시도해 주세요.')
+    }
   }
 
   function addChecklistRow() {
@@ -39,19 +56,31 @@ export function TodoCreatePage() {
       <Link className="text-sm font-medium text-muted hover:text-ink" to="/">‹ Todo 목록</Link>
       <h1 className="mt-8 text-2xl font-semibold tracking-[-0.04em] text-ink sm:text-3xl">Todo 추가</h1>
 
-      <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+      <form className="mt-6 space-y-5" noValidate onSubmit={handleSubmit}>
         <section className="rounded-2xl bg-white p-5 sm:p-6">
           <label className="block text-sm font-semibold text-ink" htmlFor="new-todo-title">프로젝트 이름</label>
           <input
+            aria-describedby={titleError ? 'new-todo-title-error' : undefined}
+            aria-invalid={Boolean(titleError)}
             autoFocus
             className="mt-2 w-full rounded-xl bg-surface-muted px-4 py-3 text-base text-ink outline-accent"
             id="new-todo-title"
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) => {
+              setTitle(event.target.value)
+              setTitleError('')
+              setSubmitError('')
+            }}
             placeholder="예: 개인 프로젝트"
+            ref={titleInputRef}
             required
             type="text"
             value={title}
           />
+          {titleError && (
+            <p className="mt-2 text-sm font-medium text-accent" id="new-todo-title-error" role="alert">
+              {titleError}
+            </p>
+          )}
 
           {!repository && (
             <button
@@ -148,6 +177,10 @@ export function TodoCreatePage() {
               </button>
             </div>
           </section>
+        )}
+
+        {submitError && (
+          <p className="text-sm font-medium text-accent" role="alert">{submitError}</p>
         )}
 
         <div className="flex justify-end gap-2 pt-2">
