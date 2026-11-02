@@ -5,6 +5,8 @@ export type TodoContextValue = {
   todos: Todo[]
   addTodo: (input: NewTodoInput) => string
   updateTodo: (todoId: string, changes: TodoChanges) => void
+  deleteTodo: (todoId: string) => void
+  toggleTodoCompleted: (todoId: string) => void
   toggleChecklistItem: (todoId: string, itemId: string) => void
   setRepository: (todoId: string, repository: Repository | null) => void
 }
