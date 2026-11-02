@@ -3,10 +3,10 @@ import type { NewTodoInput, Repository, Todo, TodoChanges } from './todoData'
 
 export type TodoContextValue = {
   todos: Todo[]
-  addTodo: (input: NewTodoInput) => number
-  updateTodo: (todoId: number, changes: TodoChanges) => void
-  toggleChecklistItem: (todoId: number, itemId: string) => void
-  setRepository: (todoId: number, repository: Repository | null) => void
+  addTodo: (input: NewTodoInput) => string
+  updateTodo: (todoId: string, changes: TodoChanges) => void
+  toggleChecklistItem: (todoId: string, itemId: string) => void
+  setRepository: (todoId: string, repository: Repository | null) => void
 }
 
 export const TodoContext = createContext<TodoContextValue | null>(null)

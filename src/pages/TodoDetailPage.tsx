@@ -8,7 +8,7 @@ import { dDayLabel, getProgress, previewRepositories } from '../features/todos/t
 import type { ChecklistItem, TodoChanges } from '../features/todos/todoData'
 import { NotFoundPage } from './NotFoundPage'
 
-type EditDraft = TodoChanges & { todoId: number }
+type EditDraft = TodoChanges & { todoId: string }
 
 export function TodoDetailPage() {
   const { todoId } = useParams()
@@ -17,7 +17,7 @@ export function TodoDetailPage() {
   const [newItemTitle, setNewItemTitle] = useState('')
   const [editError, setEditError] = useState('')
   const [isRepositoryPickerOpen, setIsRepositoryPickerOpen] = useState(false)
-  const foundTodo = todos.find((item) => item.id === Number(todoId))
+  const foundTodo = todos.find((item) => item.id === todoId)
 
   if (!foundTodo) return <NotFoundPage />
 

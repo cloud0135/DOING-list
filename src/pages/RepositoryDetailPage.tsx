@@ -8,7 +8,7 @@ export function RepositoryDetailPage() {
   const { todoId } = useParams()
   const { todos, setRepository } = useTodos()
   const [search, setSearch] = useState('')
-  const todo = todos.find((item) => item.id === Number(todoId))
+  const todo = todos.find((item) => item.id === todoId)
 
   if (!todo) return <NotFoundPage />
 

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SewingButtonCheckbox } from '../components/SewingButtonCheckbox'
 import { useTodos } from '../features/todos/todoContext'
-import { compareDeadlines, dDayLabel, getProgress, isTodoComplete } from '../features/todos/todoData'
+import { compareDeadlines, compareTitles, dDayLabel, getProgress, isTodoComplete } from '../features/todos/todoData'
 
 type SortBy = 'deadline' | 'name'
 
@@ -10,14 +10,14 @@ export function HomePage() {
   const { todos, toggleChecklistItem } = useTodos()
   const [sortBy, setSortBy] = useState<SortBy>('deadline')
   const [slideIndex, setSlideIndex] = useState(0)
-  const [expandedTodoIds, setExpandedTodoIds] = useState<number[]>([])
+  const [expandedTodoIds, setExpandedTodoIds] = useState<string[]>([])
   const pointerStartX = useRef<number | null>(null)
 
   const deadlineItems = todos.filter((todo) => !isTodoComplete(todo) && todo.dueDate !== null).sort(compareDeadlines)
   const activeSlide = Math.min(slideIndex, Math.max(0, deadlineItems.length - 1))
   const visibleTodos = [...todos].sort(
     sortBy === 'name'
-      ? (a, b) => a.title.localeCompare(b.title, 'ko') || a.id - b.id
+      ? compareTitles
       : compareDeadlines,
   )
   const remainingCount = todos.filter((todo) => !isTodoComplete(todo)).length
@@ -31,7 +31,7 @@ export function HomePage() {
     setSlideIndex((current) => Math.max(0, Math.min(current + (distance > 0 ? 1 : -1), deadlineItems.length - 1)))
   }
 
-  function toggleExpanded(todoId: number) {
+  function toggleExpanded(todoId: string) {
     setExpandedTodoIds((current) => (
       current.includes(todoId) ? current.filter((id) => id !== todoId) : [...current, todoId]
     ))

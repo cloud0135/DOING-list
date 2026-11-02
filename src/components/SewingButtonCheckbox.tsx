@@ -7,7 +7,7 @@ type SewingButtonCheckboxProps = {
   label: string
   onChange: () => void
   size?: 'small' | 'regular'
-  todoId: number
+  todoId: string
 }
 
 const shapeOrder: ButtonShape[] = ['round', 'heart', 'flower', 'star']
@@ -43,7 +43,8 @@ function ButtonOutline({ shape }: { shape: ButtonShape }) {
 }
 
 export function SewingButtonCheckbox({ checked, id, itemIndex, label, onChange, size = 'regular', todoId }: SewingButtonCheckboxProps) {
-  const shape = shapeOrder[(todoId + itemIndex - 1) % shapeOrder.length]
+  const todoIdSeed = [...todoId].reduce((sum, character) => sum + character.charCodeAt(0), 0)
+  const shape = shapeOrder[(todoIdSeed + itemIndex) % shapeOrder.length]
 
   return (
     <span className={`relative inline-block shrink-0 rounded-lg focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${size === 'small' ? 'size-10' : 'size-12'}`}>
