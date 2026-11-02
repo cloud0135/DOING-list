@@ -242,3 +242,4 @@ Todo 선택
 
 - [사용자 흐름](USER_FLOW.md)
 - [상세 사용자 흐름](docs/user-flow.md)
+- [Todo 핵심 동작 규칙](docs/todo-domain-rules.md)
