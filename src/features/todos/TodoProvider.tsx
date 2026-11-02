@@ -33,13 +33,19 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   }
 
   function updateTodo(todoId: string, changes: TodoChanges) {
+    const title = changes.title.trim()
+    const checklist = changes.checklist.map((item) => ({ ...item, title: item.title.trim() }))
+    if (!title || checklist.some((item) => !item.title)) {
+      throw new Error('Todo and checklist titles are required.')
+    }
+
     dispatch({
       type: 'todo/updated',
       todoId,
       changes: {
-        title: changes.title.trim(),
+        title,
         dueDate: changes.dueDate,
-        checklist: changes.checklist.map((item) => ({ ...item, title: item.title.trim() })),
+        checklist,
       },
       updatedAt: new Date().toISOString(),
     })

@@ -7,7 +7,7 @@ import { compareDeadlines, compareTitles, dDayLabel, getProgress, isTodoComplete
 type SortBy = 'deadline' | 'name'
 
 export function HomePage() {
-  const { todos, toggleChecklistItem } = useTodos()
+  const { todos, toggleChecklistItem, toggleTodoCompleted } = useTodos()
   const [sortBy, setSortBy] = useState<SortBy>('deadline')
   const [slideIndex, setSlideIndex] = useState(0)
   const [expandedTodoIds, setExpandedTodoIds] = useState<string[]>([])
@@ -133,7 +133,7 @@ export function HomePage() {
               const isExpanded = expandedTodoIds.includes(todo.id)
 
               return (
-                <li className="overflow-hidden rounded-2xl bg-white transition-colors hover:bg-accent-soft/40" key={todo.id}>
+                <li className={`overflow-hidden rounded-2xl transition-colors hover:bg-accent-soft/40 ${todo.isCompleted ? 'bg-surface-muted/70' : 'bg-white'}`} key={todo.id}>
                   <div className="relative">
                     <Link
                       aria-label={`${todo.title} 상세 페이지 보기`}
@@ -142,7 +142,7 @@ export function HomePage() {
                     />
                     <div className="px-5 py-5">
                       <div className="flex items-start justify-between gap-4">
-                        <p className="min-w-0 font-medium text-ink">{todo.title}</p>
+                        <p className={`min-w-0 font-medium ${todo.isCompleted ? 'text-muted line-through' : 'text-ink'}`}>{todo.title}</p>
                         {todo.dueDate ? (
                           <time className="shrink-0 text-right text-base font-bold text-accent" dateTime={todo.dueDate}>
                             {dDayLabel(todo.dueDate)}
@@ -166,23 +166,33 @@ export function HomePage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-end justify-between gap-4">
+                      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
                         <Link
-                          className="relative z-20 inline-flex min-w-0 max-w-[70%] rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:border-accent hover:bg-accent-soft"
+                          className="relative z-20 inline-flex min-w-0 max-w-[60%] rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:border-accent hover:bg-accent-soft"
                           to={`/repositories/${todo.id}`}
                         >
                           <span className="truncate">{todo.repository?.name ?? '레포 연결 전'}</span>
                         </Link>
-                        <button
-                          aria-controls={isExpanded ? `todo-checklist-${todo.id}` : undefined}
-                          aria-expanded={isExpanded}
-                          aria-label={`${todo.title} 하위 체크리스트 ${isExpanded ? '접기' : '펼치기'}`}
-                          className="relative z-20 flex size-8 items-center justify-center rounded-lg text-2xl leading-none text-ink hover:bg-accent-soft"
-                          onClick={() => toggleExpanded(todo.id)}
-                          type="button"
-                        >
-                          <span aria-hidden="true" className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>⌄</span>
-                        </button>
+                        <div className="relative z-20 flex items-center gap-1">
+                          <button
+                            aria-pressed={todo.isCompleted}
+                            className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-ink hover:border-accent hover:bg-accent-soft"
+                            onClick={() => toggleTodoCompleted(todo.id)}
+                            type="button"
+                          >
+                            {todo.isCompleted ? '완료 취소' : 'Todo 완료'}
+                          </button>
+                          <button
+                            aria-controls={isExpanded ? `todo-checklist-${todo.id}` : undefined}
+                            aria-expanded={isExpanded}
+                            aria-label={`${todo.title} 하위 체크리스트 ${isExpanded ? '접기' : '펼치기'}`}
+                            className="flex size-8 items-center justify-center rounded-lg text-2xl leading-none text-ink hover:bg-accent-soft"
+                            onClick={() => toggleExpanded(todo.id)}
+                            type="button"
+                          >
+                            <span aria-hidden="true" className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>⌄</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

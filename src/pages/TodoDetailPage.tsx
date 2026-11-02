@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { SewingButtonCheckbox } from '../components/SewingButtonCheckbox'
 import { TrashIcon } from '../components/TrashIcon'
 import { useTodos } from '../features/todos/todoContext'
@@ -12,7 +12,8 @@ type EditDraft = TodoChanges & { todoId: string }
 
 export function TodoDetailPage() {
   const { todoId } = useParams()
-  const { todos, updateTodo, toggleChecklistItem, setRepository } = useTodos()
+  const navigate = useNavigate()
+  const { todos, updateTodo, deleteTodo, toggleTodoCompleted, toggleChecklistItem, setRepository } = useTodos()
   const [draft, setDraft] = useState<EditDraft | null>(null)
   const [newItemTitle, setNewItemTitle] = useState('')
   const [editError, setEditError] = useState('')
@@ -63,16 +64,28 @@ export function TodoDetailPage() {
       return
     }
 
-    updateTodo(todo.id, {
-      title: activeDraft.title,
-      dueDate: activeDraft.dueDate,
-      checklist: newItemTitle.trim()
-        ? [...activeDraft.checklist, { id: crypto.randomUUID(), title: newItemTitle.trim(), completed: false }]
-        : activeDraft.checklist,
-    })
-    setNewItemTitle('')
-    setDraft(null)
-    setEditError('')
+    try {
+      updateTodo(todo.id, {
+        title: activeDraft.title,
+        dueDate: activeDraft.dueDate,
+        checklist: newItemTitle.trim()
+          ? [...activeDraft.checklist, { id: crypto.randomUUID(), title: newItemTitle.trim(), completed: false }]
+          : activeDraft.checklist,
+      })
+      setNewItemTitle('')
+      setDraft(null)
+      setEditError('')
+    } catch {
+      setEditError('Todo 수정을 저장하지 못했어요. 다시 시도해 주세요.')
+    }
+  }
+
+  function handleDelete() {
+    const confirmed = window.confirm(`“${todo.title}” Todo를 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)
+    if (!confirmed) return
+
+    deleteTodo(todo.id)
+    navigate('/')
   }
 
   return (
@@ -256,6 +269,25 @@ export function TodoDetailPage() {
         </div>
       )}
       {editError && <p className="mt-3 text-sm font-medium text-accent" role="alert">{editError}</p>}
+      {!activeDraft && (
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+          <button
+            className="rounded-lg px-3 py-2 text-sm font-medium text-accent hover:bg-accent-soft"
+            onClick={handleDelete}
+            type="button"
+          >
+            Todo 삭제
+          </button>
+          <button
+            aria-pressed={todo.isCompleted}
+            className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition ${todo.isCompleted ? 'border border-line bg-white text-ink hover:bg-accent-soft' : 'bg-ink text-white hover:bg-accent'}`}
+            onClick={() => toggleTodoCompleted(todo.id)}
+            type="button"
+          >
+            {todo.isCompleted ? '완료 취소' : 'Todo 완료'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
