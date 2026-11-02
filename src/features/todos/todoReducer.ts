@@ -1,6 +1,7 @@
 import type { Repository, Todo, TodoChanges } from './todoData'
 
 export type TodoAction =
+  | { type: 'todos/replaced'; todos: Todo[] }
   | { type: 'todo/added'; todo: Todo }
   | { type: 'todo/updated'; todoId: string; changes: TodoChanges; updatedAt: string }
   | { type: 'todo/deleted'; todoId: string }
@@ -22,6 +23,9 @@ function updateTodoById(todos: Todo[], todoId: string, update: (todo: Todo) => T
 
 export function todoReducer(todos: Todo[], action: TodoAction): Todo[] {
   switch (action.type) {
+    case 'todos/replaced':
+      return action.todos
+
     case 'todo/added':
       return [...todos, action.todo]
 

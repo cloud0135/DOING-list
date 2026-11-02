@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { AppShell } from './components/AppShell'
+import { StorageNotice } from './components/StorageNotice'
 import { TodoProvider } from './features/todos/TodoProvider'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
@@ -16,6 +17,7 @@ function App() {
     <BrowserRouter>
       <TodoProvider>
         <AppShell>
+          <StorageNotice />
           <Routes>
             <Route element={<HomePage />} path="/" />
             <Route element={<TodoCreatePage />} path="/todos/new" />

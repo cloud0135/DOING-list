@@ -1,17 +1,51 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import type { ReactNode } from 'react'
 import { TodoContext } from './todoContext'
 import { initialTodos } from './todoData'
 import type { NewTodoInput, Repository, TodoChanges } from './todoData'
 import { todoReducer } from './todoReducer'
-import { loadTodos, saveTodos } from './todoStorage'
+import {
+  TODO_STORAGE_KEY,
+  backupInvalidTodos,
+  loadTodos,
+  parseStoredTodos,
+  saveTodos,
+} from './todoStorage'
+import type { TodoStorageWarning } from './todoStorage'
+
+function storageWarningReducer(
+  _currentWarning: TodoStorageWarning | null,
+  nextWarning: TodoStorageWarning,
+) {
+  return nextWarning
+}
 
 export function TodoProvider({ children }: { children: ReactNode }) {
-  const [todos, dispatch] = useReducer(todoReducer, initialTodos, loadTodos)
+  const [initialStorage] = useState(() => loadTodos(initialTodos))
+  const [todos, dispatch] = useReducer(todoReducer, initialStorage.todos)
+  const [storageWarning, reportStorageWarning] = useReducer(storageWarningReducer, initialStorage.warning)
 
   useEffect(() => {
-    saveTodos(todos)
-  }, [todos])
+    if (!initialStorage.persistOnLoad && todos === initialStorage.todos) return
+    if (!saveTodos(todos)) reportStorageWarning('unavailable')
+  }, [initialStorage, todos])
+
+  useEffect(() => {
+    function syncTodos(event: StorageEvent) {
+      if (event.key !== TODO_STORAGE_KEY || event.newValue === null) return
+
+      const parsedStorage = parseStoredTodos(event.newValue)
+      if (!parsedStorage) {
+        reportStorageWarning(backupInvalidTodos(event.newValue) ? 'recovered' : 'unavailable')
+        return
+      }
+
+      dispatch({ type: 'todos/replaced', todos: parsedStorage.todos })
+    }
+
+    window.addEventListener('storage', syncTodos)
+    return () => window.removeEventListener('storage', syncTodos)
+  }, [])
 
   function addTodo(input: NewTodoInput) {
     const title = input.title.trim()
@@ -75,6 +109,7 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   return (
     <TodoContext.Provider value={{
       todos,
+      storageWarning,
       addTodo,
       updateTodo,
       deleteTodo,

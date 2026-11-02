@@ -1,7 +1,21 @@
 import type { ChecklistItem, Repository, Todo } from './todoData'
 
 export const TODO_STORAGE_KEY = 'doing-list:todos'
+export const TODO_STORAGE_RECOVERY_KEY = 'doing-list:todos:recovery'
 export const TODO_STORAGE_VERSION = 1
+
+export type TodoStorageWarning = 'recovered' | 'unavailable'
+
+export type TodoStorageLoadResult = {
+  todos: Todo[]
+  warning: TodoStorageWarning | null
+  persistOnLoad: boolean
+}
+
+export type ParsedTodoStorage = {
+  todos: Todo[]
+  migrated: boolean
+}
 
 type TodoStorageState = {
   version: typeof TODO_STORAGE_VERSION
@@ -50,15 +64,67 @@ function isTodoStorageState(value: unknown): value is TodoStorageState {
     && value.todos.every(isTodo)
 }
 
-export function loadTodos(fallbackTodos: Todo[]): Todo[] {
-  try {
-    const storedValue = window.localStorage.getItem(TODO_STORAGE_KEY)
-    if (storedValue === null) return fallbackTodos
+function isLegacyTodoStorageState(value: unknown): value is { version: 0; todos: Todo[] } {
+  return isRecord(value)
+    && value.version === 0
+    && Array.isArray(value.todos)
+    && value.todos.every(isTodo)
+}
 
+export function parseStoredTodos(storedValue: string): ParsedTodoStorage | null {
+  try {
     const parsedValue: unknown = JSON.parse(storedValue)
-    return isTodoStorageState(parsedValue) ? parsedValue.todos : fallbackTodos
+    if (isTodoStorageState(parsedValue)) {
+      return { todos: parsedValue.todos, migrated: false }
+    }
+    if (isLegacyTodoStorageState(parsedValue)) {
+      return { todos: parsedValue.todos, migrated: true }
+    }
+    if (Array.isArray(parsedValue) && parsedValue.every(isTodo)) {
+      return { todos: parsedValue, migrated: true }
+    }
+    return null
   } catch {
-    return fallbackTodos
+    return null
+  }
+}
+
+export function backupInvalidTodos(storedValue: string): boolean {
+  try {
+    window.localStorage.setItem(TODO_STORAGE_RECOVERY_KEY, storedValue)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function loadTodos(fallbackTodos: Todo[]): TodoStorageLoadResult {
+  let storedValue: string | null
+
+  try {
+    storedValue = window.localStorage.getItem(TODO_STORAGE_KEY)
+  } catch {
+    return { todos: fallbackTodos, warning: 'unavailable', persistOnLoad: false }
+  }
+
+  if (storedValue === null) {
+    return { todos: fallbackTodos, warning: null, persistOnLoad: true }
+  }
+
+  const parsedStorage = parseStoredTodos(storedValue)
+  if (parsedStorage) {
+    return {
+      todos: parsedStorage.todos,
+      warning: null,
+      persistOnLoad: parsedStorage.migrated,
+    }
+  }
+
+  const backedUp = backupInvalidTodos(storedValue)
+  return {
+    todos: fallbackTodos,
+    warning: backedUp ? 'recovered' : 'unavailable',
+    persistOnLoad: backedUp,
   }
 }
 

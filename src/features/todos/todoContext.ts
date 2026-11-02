@@ -1,8 +1,10 @@
 import { createContext, useContext } from 'react'
 import type { NewTodoInput, Repository, Todo, TodoChanges } from './todoData'
+import type { TodoStorageWarning } from './todoStorage'
 
 export type TodoContextValue = {
   todos: Todo[]
+  storageWarning: TodoStorageWarning | null
   addTodo: (input: NewTodoInput) => string
   updateTodo: (todoId: string, changes: TodoChanges) => void
   deleteTodo: (todoId: string) => void
